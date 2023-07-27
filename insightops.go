@@ -39,10 +39,6 @@ const (
 	tlsPort     = 443
 )
 
-var (
-	host = "us.data.logs.insight.rapid7.com"
-)
-
 // New
 // creates and returns a `Logrus` hook for InsightOps Token-based logging
 // ref: https://docs.rapid7.com/insightops/token-tcp
@@ -57,13 +53,13 @@ func New(token string, region string, options *Opts) (hook *InsightOpsHook, err 
 	}
 
 	// Set the target host
-	host = region + hostPostfix
 	hook = &InsightOpsHook{
 		encrypt:   true,
 		token:     token,
 		levels:    logrus.AllLevels,
 		formatter: &logrus.JSONFormatter{},
 		network:   "tcp",
+		host:      region + hostPostfix,
 		port:      tlsPort,
 	}
 
@@ -83,7 +79,7 @@ func New(token string, region string, options *Opts) (hook *InsightOpsHook, err 
 				options.DatahubConfig.Port = 514
 			}
 
-			host = options.DatahubConfig.Host
+			hook.host = options.DatahubConfig.Host
 			hook.encrypt = false
 			hook.network = options.DatahubConfig.Type
 			hook.port = options.DatahubConfig.Port
@@ -135,10 +131,10 @@ func (hook *InsightOpsHook) Levels() []logrus.Level {
 func (hook InsightOpsHook) netConnect() (net.Conn, error) {
 	// Connect to InsightOps over tls/tcp
 	if hook.encrypt {
-		return tls.Dial(hook.network, fmt.Sprintf("%s:%d", host, hook.port), hook.tlsConfig)
+		return tls.Dial(hook.network, fmt.Sprintf("%s:%d", hook.host, hook.port), hook.tlsConfig)
 	}
 	// Connect to InsightOps over udp/tcp unsecured
-	return net.Dial(hook.network, fmt.Sprintf("%s:%d", host, hook.port))
+	return net.Dial(hook.network, fmt.Sprintf("%s:%d", hook.host, hook.port))
 }
 
 // write creates a connection and writes the given line to InsightOps with hook.token inlined
