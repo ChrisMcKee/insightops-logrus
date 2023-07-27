@@ -88,10 +88,10 @@ func New(token string, region string, options *Opts) (hook *InsightOpsHook, err 
 			hook.network = options.DatahubConfig.Type
 			hook.port = options.DatahubConfig.Port
 		}
-	}
 
-	if hook.encrypt && options.TlsConfig != nil {
-		hook.tlsConfig = options.TlsConfig
+		if hook.encrypt && options.TlsConfig != nil {
+			hook.tlsConfig = options.TlsConfig
+		}
 	}
 
 	// Test connection
