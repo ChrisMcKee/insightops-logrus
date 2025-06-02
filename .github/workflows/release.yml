@@ -24,7 +24,7 @@ jobs:
       - name: Get current date/time for tag
         id: get_time
         run: |
-          echo "date=$(date -u +'%Y.%m.%d.%H%M')" >> $GITHUB_OUTPUT
+          echo "date=$(date -u +'%Y.%m.%d%H%M')" >> $GITHUB_OUTPUT
 
       - name: Create tag
         id: create_tag
