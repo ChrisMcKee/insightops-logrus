@@ -2,6 +2,10 @@ name: Test and Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.2.3 or v2024.06.01)'
+        required: true
 
 permissions:
   contents: write
@@ -21,24 +25,19 @@ jobs:
       - name: Run tests
         run: go test -v ./
 
-      - name: Get current date/time for tag
-        id: get_time
-        run: |
-          echo "date=$(date -u +'%Y.%m.%d.%H%M')" >> $GITHUB_OUTPUT
-
       - name: Create tag
         id: create_tag
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git tag v${{ steps.get_time.outputs.date }}
-          git push origin v${{ steps.get_time.outputs.date }}
+          git tag ${{ github.event.inputs.version }}
+          git push origin ${{ github.event.inputs.version }}
 
       - name: Create GitHub Release
         uses: actions/github-script@v7
         with:
           script: |
-            const tag = `v${{ steps.get_time.outputs.date }}`
+            const tag = `${{ github.event.inputs.version }}`
             await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
