@@ -86,7 +86,7 @@ func TestFakeOpInsightDataHub(t *testing.T) {
 	s := createMockDataHubTcpService()
 
 	// Create a TCP client and connect to the mock server
-	conn, err := net.Dial("tcp", "localhost:514")
+	conn, err := net.Dial("tcp", "localhost:10514")
 	if err != nil {
 		t.Fatalf("Failed to connect to mock TCP server: %v", err)
 	}
@@ -191,7 +191,7 @@ func createMockDataHubTcpService() *Server {
 		data: make(chan []byte, 1),
 	}
 
-	l, err := net.Listen("tcp", "localhost:514")
+	l, err := net.Listen("tcp", "localhost:10514")
 	if err != nil {
 		log.Fatal(err)
 	}
