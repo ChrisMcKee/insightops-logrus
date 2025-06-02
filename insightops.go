@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -20,6 +21,10 @@ type InsightOpsHook struct {
 	port      int
 	tlsConfig *tls.Config
 	host      string
+
+	pool      chan net.Conn
+	poolSize  int
+	poolMutex sync.Mutex
 }
 
 // Opts is a set of optional parameters for NewEncryptedHook
@@ -62,7 +67,10 @@ func New(token string, region string, options *Opts) (hook *InsightOpsHook, err 
 		network:   "tcp",
 		host:      region + hostPostfix,
 		port:      tlsPort,
+		poolSize:  3,
 	}
+
+	hook.pool = make(chan net.Conn, hook.poolSize)
 
 	if options != nil {
 		hook.formatter.TimestampFormat = time.RFC3339
@@ -148,16 +156,46 @@ func (hook InsightOpsHook) netConnect() (net.Conn, error) {
 //
 //goland:noinspection GoMixedReceiverTypes
 func (hook *InsightOpsHook) write(line string) (err error) {
-	if conn, err := hook.netConnect(); err == nil {
-		defer func(conn net.Conn) {
-			err := conn.Close()
-			if err != nil {
-				// ignore
-			}
-		}(conn)
-		_, err = conn.Write([]byte(hook.token + line))
+	conn, err := hook.getConn()
+	if err != nil {
+		return err
 	}
-	return
+	_, err = conn.Write([]byte(hook.token + line))
+	if err != nil {
+		conn.Close()
+		return err
+	}
+	hook.putConn(conn)
+	return nil
+}
+
+func (hook *InsightOpsHook) getConn() (net.Conn, error) {
+	select {
+	case conn := <-hook.pool:
+		return conn, nil
+	default:
+		return hook.netConnect()
+	}
+}
+
+func (hook *InsightOpsHook) putConn(conn net.Conn) {
+	hook.poolMutex.Lock()
+	defer hook.poolMutex.Unlock()
+	select {
+	case hook.pool <- conn:
+		// get back in the pool
+	default:
+		conn.Close()
+	}
+}
+
+func (hook *InsightOpsHook) FlushAndClose() {
+	hook.poolMutex.Lock()
+	defer hook.poolMutex.Unlock()
+	close(hook.pool)
+	for conn := range hook.pool {
+		conn.Close()
+	}
 }
 
 // format serializes entry to JSON
