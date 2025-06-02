@@ -1,15 +1,16 @@
 package insightops_logrus
 
 import (
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
+	"fmt"
 	"io"
 	"log"
 	"net"
-	"os"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {
@@ -17,7 +18,7 @@ func init() {
 	logrus.SetFormatter(&logrus.JSONFormatter{}) // You can use any formatter; the hook will always format as JSON without interfering with your other hooks
 
 	hook, err := New(
-		os.Getenv("Insight.Token"), // fetching token from env vars here. You can make a token in your insightops account and are expected to have 1 token for each application
+		"00000000-0000-0000-0000-000000000000", // fetching token from env vars here. You can make a token in your insightops account and are expected to have 1 token for each application
 		"eu",
 		&Opts{
 			Priority: logrus.InfoLevel, // log level is inclusive. Setting to logrus.ErrorLevel, for example, would include errors, panics, and fatals, but not info or debug.
@@ -47,7 +48,7 @@ func TestHandlePanic(t *testing.T) {
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"bool-field": true,
-				"err":        err,
+				"err":        fmt.Sprintf("%+v", err),
 				"number":     100,
 			}).Error("Panic recovery succeeded")
 		}
@@ -205,6 +206,7 @@ func (s *Server) Stop() {
 	s.listener.Close()
 	s.wg.Wait()
 }
+
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
 	buf := make([]byte, 2048)

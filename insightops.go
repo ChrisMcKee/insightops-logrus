@@ -3,10 +3,11 @@ package insightops_logrus
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"net"
 	"os"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // InsightOpsHook used to send logs to insightOps (rapid7) formally logentries
@@ -65,7 +66,13 @@ func New(token string, region string, options *Opts) (hook *InsightOpsHook, err 
 
 	if options != nil {
 		hook.formatter.TimestampFormat = time.RFC3339
-		hook.levels = logrus.AllLevels[:options.Priority+1]
+
+		// Set default priority to InfoLevel if not set or out of range
+		priority := options.Priority
+		if priority < logrus.PanicLevel || priority > logrus.TraceLevel {
+			priority = logrus.InfoLevel
+		}
+		hook.levels = logrus.AllLevels[:priority+1]
 
 		// Datahub config
 		if options.DatahubConfig != nil {
@@ -145,7 +152,7 @@ func (hook *InsightOpsHook) write(line string) (err error) {
 		defer func(conn net.Conn) {
 			err := conn.Close()
 			if err != nil {
-				//ignore
+				// ignore
 			}
 		}(conn)
 		_, err = conn.Write([]byte(hook.token + line))
